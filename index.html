@@ -82,7 +82,7 @@
                             <div class="form-group">
                                 <label for="new-role">Role</label>
                                 <select id="new-role" class="form-control" required>
-                                    <option value="user">Executing User</option>
+                                    <option value="user">User</option>
                                     <option value="manager">Manager</option>
                                 </select>
                             </div>
@@ -387,6 +387,11 @@
                         <label>Last Updated</label>
                         <span id="modal-task-updated"></span>
                     </div>
+                    <div id="completion-info-section" class="detail-item full-width hidden">
+                        <label>Completion Details</label>
+                        <p id="modal-completion-details"></p>
+                        <div id="modal-completion-files"></div>
+                    </div>
                 </div>
 
                 <!-- Manager Actions -->
@@ -396,13 +401,24 @@
                         <select id="assign-user-select" class="form-control"></select>
                         <button id="assign-task-btn" class="btn btn-primary">Assign Task</button>
                     </div>
+                    <button id="manager-edit-task-btn" class="btn btn-primary">Edit Task</button>
+                    <button id="manager-delete-task-btn" class="btn btn-danger">Delete Task</button>
                     <button id="approve-completion-btn" class="btn btn-primary hidden">Approve completion</button>
                     <button id="close-task-btn" class="btn btn-success hidden">Mark as Closed</button>
                 </div>
 
                 <!-- User Actions -->
                 <div id="user-actions" class="modal-actions hidden">
-                    <button id="complete-task-btn" class="btn btn-success">Mark as Completed</button>
+                    <div class="form-group">
+                        <label for="completion-details">Completion Details </label>
+                        <textarea id="completion-details" class="form-control" rows="4" placeholder="Describe what you've accomplished and provide any relevant details..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="completion-files">Attach Files *</label>
+                        <input type="file" id="completion-files" class="form-control" multiple>
+                        <small id="files-info" class="form-text"></small>
+                    </div>
+                    <button id="complete-task-btn" class="btn btn-success" disabled>Mark as Completed</button>
                 </div>
             </div>
         </div>
