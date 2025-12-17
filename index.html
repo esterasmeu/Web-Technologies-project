@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StatCore TaskHub - Task Management System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Header -->
+    <header id="app-header" class="header hidden">
+        <div class="container">
+            <div class="header-content">
+                <h1 class="logo">StatCore TaskHub</h1>
+                <div class="user-info">
+                    <div class="notification-container">
+                        <button id="notification-btn" class="notification-btn">
+                            <span class="bell-icon">🔔</span>
+                            <span id="notification-badge" class="notification-badge hidden">0</span>
+                        </button>
+                        <div id="notifications-dropdown" class="notifications-dropdown hidden"></div>
+                    </div>
+                    <span id="current-user-name" class="user-name"></span>
+                    <span id="current-user-role" class="user-role"></span>
+                    <button id="logout-btn" class="btn btn-secondary">Logout</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Login View -->
+    <div id="login-view" class="view active">
+        <div class="login-container">
+            <div class="login-card">
+                <h1 class="login-title">StatCore TaskHub</h1>
+                <p class="login-subtitle">Task Planning & Monitoring</p>
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="login-username">Username</label>
+                        <input type="text" id="login-username" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password">Password</label>
+                        <input type="password" id="login-password" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Login</button>
+                </form>
+                <div id="login-error" class="error-message hidden"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin View -->
+    <div id="admin-view" class="view">
+        <div class="container">
+            <nav class="nav-tabs">
+                <button class="nav-tab active" data-tab="users">Users</button>
+                <button class="nav-tab" data-tab="overview">Overview</button>
+                <button class="nav-tab" data-tab="tasks">Tasks</button>
+                <button class="nav-tab" data-tab="chat">Chat</button>
+                <button class="nav-tab" data-tab="announcements">Announcements</button>
+            </nav>
+
+            <!-- Users Tab -->
+            <div id="admin-users-tab" class="tab-content active">
+                <div class="section">
+                    <h2>Add New User</h2>
+                    <form id="add-user-form" class="form-inline">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="new-username">Username</label>
+                                <input type="text" id="new-username" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="new-fullname">Full Name</label>
+                                <input type="text" id="new-fullname" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="new-password">Password</label>
+                                <input type="password" id="new-password" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="new-role">Role</label>
+                                <select id="new-role" class="form-control" required>
+                                    <option value="user">Executing User</option>
+                                    <option value="manager">Manager</option>
+                                </select>
+                            </div>
+                            <div class="form-group" id="manager-select-group">
+                                <label for="new-manager">Assign Manager</label>
+                                <select id="new-manager" class="form-control"></select>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Add User</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="section">
+                    <h2>All Users</h2>
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Full Name</th>
+                                    <th>Role</th>
+                                    <th>Manager</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-list"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Overview Tab -->
+            <div id="admin-overview-tab" class="tab-content">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Total Users</h3>
+                        <p class="stat-value" id="stat-total-users">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Managers</h3>
+                        <p class="stat-value" id="stat-managers">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Tasks</h3>
+                        <p class="stat-value" id="stat-total-tasks">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Active Tasks</h3>
+                        <p class="stat-value" id="stat-active-tasks">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tasks Tab -->
+            <div id="admin-tasks-tab" class="tab-content">
+                <div class="section">
+                    <div class="section-header">
+                        <h2>All Tasks</h2>
+                        <div class="filter-group">
+                            <select id="admin-task-status-filter" class="form-control">
+                                <option value="all">All Statuses</option>
+                                <option value="OPEN">Open</option>
+                                <option value="PENDING">Pending</option>
+                                <option value="COMPLETION_REQUESTED">Awaiting Approval</option>
+                                <option value="COMPLETED">Completed</option>
+                                <option value="CLOSED">Closed</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="admin-tasks-list" class="tasks-grid"></div>
+                </div>
+            </div>
+
+            <!-- Chat Tab -->
+            <div id="admin-chat-tab" class="tab-content">
+                <div class="chat-container">
+                    <h2>Manager Communication</h2>
+                    <div class="chat-box">
+                        <div id="admin-chat-messages" class="chat-messages"></div>
+                        <form id="admin-chat-form" class="chat-input-form">
+                            <input type="text" id="admin-chat-input" class="chat-input" placeholder="Type a message..." required>
+                            <button type="submit" class="btn btn-primary">Send</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Announcements (Read-only) -->
+            <div id="admin-announcements-tab" class="tab-content">
+                <div class="section">
+                    <h2>All Announcements</h2>
+                    <div id="admin-announcements-list" class="announcements-grid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manager View -->
+    <div id="manager-view" class="view">
+        <div class="container">
+            <nav class="nav-tabs">
+                <button class="nav-tab active" data-tab="tasks">All Tasks</button>
+                <button class="nav-tab" data-tab="create">Create Task</button>
+                <button class="nav-tab" data-tab="team">Team History</button>
+                <button class="nav-tab" data-tab="team-chat">Team Chat</button>
+                <button class="nav-tab" data-tab="admin-chat">Managers & Admin</button>
+                <button class="nav-tab" data-tab="announcements">Announcements</button>
+            </nav>
+
+            <!-- All Tasks Tab -->
+            <div id="manager-tasks-tab" class="tab-content active">
+                <div class="section">
+                    <div class="section-header">
+                        <h2>Task Management</h2>
+                        <div class="filter-group">
+                            <select id="task-status-filter" class="form-control">
+                                <option value="all">All Statuses</option>
+                                <option value="OPEN">Open</option>
+                                <option value="PENDING">Pending</option>
+                                <option value="COMPLETION_REQUESTED">Awaiting Approval</option>
+                                <option value="COMPLETED">Completed</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="manager-tasks-list" class="tasks-grid"></div>
+                </div>
+            </div>
+
+            <!-- Create Task Tab -->
+            <div id="manager-create-tab" class="tab-content">
+                <div class="section">
+                    <h2>Create New Task</h2>
+                    <form id="create-task-form">
+                        <div class="form-group">
+                            <label for="task-title">Task Title</label>
+                            <input type="text" id="task-title" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="task-description">Description</label>
+                            <textarea id="task-description" class="form-control" rows="6" required></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="task-priority">Priority</label>
+                            <select id="task-priority" class="form-control">
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Create Task</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Team History Tab -->
+            <div id="manager-team-tab" class="tab-content">
+                <div class="section">
+                    <h2>Team Member Task History</h2>
+                    <div class="form-group">
+                        <label for="team-member-select">Select Team Member</label>
+                        <select id="team-member-select" class="form-control"></select>
+                    </div>
+                    <div id="team-member-history" class="tasks-grid"></div>
+                </div>
+            </div>
+
+            <!-- Team Chat Tab -->
+            <div id="manager-team-chat-tab" class="tab-content">
+                <div class="chat-container">
+                    <h2>Team Communication</h2>
+                    <div class="chat-box">
+                        <div id="manager-chat-messages" class="chat-messages"></div>
+                        <form id="manager-chat-form" class="chat-input-form">
+                            <input type="text" id="manager-chat-input" class="chat-input" placeholder="Type a message..." required>
+                            <button type="submit" class="btn btn-primary">Send</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin/Managers Chat Tab -->
+            <div id="manager-admin-chat-tab" class="tab-content">
+                <div class="chat-container">
+                    <h2>Managers & Admin Communication</h2>
+                    <div class="chat-box">
+                        <div id="manager-admin-chat-messages" class="chat-messages"></div>
+                        <form id="manager-admin-chat-form" class="chat-input-form">
+                            <input type="text" id="manager-admin-chat-input" class="chat-input" placeholder="Type a message..." required>
+                            <button type="submit" class="btn btn-primary">Send</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Announcements Tab -->
+            <div id="manager-announcements-tab" class="tab-content">
+                <div class="section">
+                    <h2>Announcements</h2>
+                    <form id="create-announcement-form" class="form-inline">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="announcement-title">Title</label>
+                                <input type="text" id="announcement-title" class="form-control" required>
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="announcement-message">Message</label>
+                                <textarea id="announcement-message" class="form-control" rows="3" required></textarea>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Publish</button>
+                    </form>
+                    <div id="manager-announcements-list" class="announcements-grid" style="margin-top:1rem;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User View -->
+    <div id="user-view" class="view">
+        <div class="container">
+            <nav class="nav-tabs">
+                <button class="nav-tab active" data-tab="mytasks">My Tasks</button>
+                <button class="nav-tab" data-tab="history">History</button>
+                <button class="nav-tab" data-tab="chat">Chat with Manager</button>
+                <button class="nav-tab" data-tab="announcements">Announcements</button>
+            </nav>
+
+            <!-- My Tasks Tab -->
+            <div id="user-mytasks-tab" class="tab-content active">
+                <div class="section">
+                    <h2>My Assigned Tasks</h2>
+                    <div id="user-tasks-list" class="tasks-grid"></div>
+                </div>
+            </div>
+
+            <!-- History Tab -->
+            <div id="user-history-tab" class="tab-content">
+                <div class="section">
+                    <h2>My Task History</h2>
+                    <div id="user-history-list" class="tasks-grid"></div>
+                </div>
+            </div>
+
+            <!-- Chat Tab -->
+            <div id="user-chat-tab" class="tab-content">
+                <div class="chat-container">
+                    <h2>Chat with Your Manager</h2>
+                    <div class="chat-box">
+                        <div id="user-chat-messages" class="chat-messages"></div>
+                        <form id="user-chat-form" class="chat-input-form">
+                            <input type="text" id="user-chat-input" class="chat-input" placeholder="Type a message..." required>
+                            <button type="submit" class="btn btn-primary">Send</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Announcements Tab -->
+            <div id="user-announcements-tab" class="tab-content">
+                <div class="section">
+                    <h2>Announcements</h2>
+                    <div id="user-announcements-list" class="announcements-grid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Detail Modal -->
+    <div id="task-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-task-title"></h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="task-detail-grid">
+                    <div class="detail-item">
+                        <label>Status</label>
+                        <span id="modal-task-status" class="task-status"></span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Priority</label>
+                        <span id="modal-task-priority" class="task-priority"></span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Created By</label>
+                        <span id="modal-task-creator"></span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Assigned To</label>
+                        <span id="modal-task-assignee"></span>
+                    </div>
+                    <div class="detail-item full-width">
+                        <label>Description</label>
+                        <p id="modal-task-description"></p>
+                    </div>
+                    <div class="detail-item">
+                        <label>Created</label>
+                        <span id="modal-task-created"></span>
+                    </div>
+                    <div class="detail-item">
+                        <label>Last Updated</label>
+                        <span id="modal-task-updated"></span>
+                    </div>
+                </div>
+
+                <!-- Manager Actions -->
+                <div id="manager-actions" class="modal-actions hidden">
+                    <div class="form-group" id="assign-user-group">
+                        <label for="assign-user-select">Assign to User</label>
+                        <select id="assign-user-select" class="form-control"></select>
+                        <button id="assign-task-btn" class="btn btn-primary">Assign Task</button>
+                    </div>
+                    <button id="approve-completion-btn" class="btn btn-primary hidden">Approve completion</button>
+                    <button id="close-task-btn" class="btn btn-success hidden">Mark as Closed</button>
+                </div>
+
+                <!-- User Actions -->
+                <div id="user-actions" class="modal-actions hidden">
+                    <button id="complete-task-btn" class="btn btn-success">Mark as Completed</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>webtechTeam @HTMLadies</p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
