@@ -296,7 +296,7 @@ class TaskFlowApp {
                     id: 26,
                     username: 'Teodor',
                     password: 'user123',
-                    fullName: 'Ţurcanu G Teodor',
+                    fullName: 'Ţurcanu Teodor',
                     role: 'user',
                     managerId: 2,
                     createdAt: new Date().toISOString()
@@ -564,7 +564,30 @@ class TaskFlowApp {
         const task = this.tasks.find(t => t.id === taskId);
         
         if (task && task.status === 'PENDING' && task.assigneeId === this.currentUser.id) {
+            // Get completion details
+            const completionDetails = document.getElementById('completion-details');
+            const completionFiles = document.getElementById('completion-files');
+            
+            if (!completionDetails || !completionDetails.value.trim()) {
+                return false;
+            }
+            
             task.status = 'COMPLETION_REQUESTED';
+            task.completionDetails = completionDetails.value.trim();
+            task.completionFiles = [];
+            
+            // Store file names (in a real app, you'd upload files to a server)
+            if (completionFiles && completionFiles.files.length > 0) {
+                for (let i = 0; i < completionFiles.files.length; i++) {
+                    task.completionFiles.push({
+                        name: completionFiles.files[i].name,
+                        size: completionFiles.files[i].size,
+                        type: completionFiles.files[i].type,
+                        uploadedAt: new Date().toISOString()
+                    });
+                }
+            }
+            
             task.updatedAt = new Date().toISOString();
             this.saveData();
             
@@ -1063,7 +1086,8 @@ class TaskFlowApp {
                 </div>
                 <p class="task-description">${this.escapeHtml(task.description)}</p>
                 <div class="task-meta">
-                    <span class="task-assignee">Assigned to: ${this.getUserName(task.assignedTo)}</span>
+                    <span class="task-assignee">Assigned to: ${task.assigneeId ? this.getUserById(task.assigneeId).fullName : 'Unassigned'}</span>
+                    <span class="task-creator">Created by: ${this.getUserById(task.creatorId).fullName}</span>
                     <div class="task-actions">
                         <button class="btn btn-small btn-primary edit-task-btn" data-task-id="${task.id}">Edit</button>
                         <button class="btn btn-small btn-danger delete-task-btn" data-task-id="${task.id}">Delete</button>
@@ -1098,7 +1122,13 @@ class TaskFlowApp {
         const container = document.getElementById('manager-tasks-list');
         container.innerHTML = '';
 
-        const tasks = this.getTasksByStatus(statusFilter);
+        // Managers only see tasks they created
+        let tasks = this.getTasksCreatedByManager(this.currentUser.id);
+        
+        // Apply status filter
+        if (statusFilter !== 'all') {
+            tasks = tasks.filter(t => t.status === statusFilter);
+        }
         
         if (tasks.length === 0) {
             container.innerHTML = `
@@ -1278,20 +1308,49 @@ class TaskFlowApp {
         document.getElementById('modal-task-created').textContent = this.formatDateTime(task.createdAt);
         document.getElementById('modal-task-updated').textContent = this.formatDateTime(task.updatedAt);
 
+        // Show/hide completion details
+        const completionInfoSection = document.getElementById('completion-info-section');
+        const modalCompletionDetails = document.getElementById('modal-completion-details');
+        const modalCompletionFiles = document.getElementById('modal-completion-files');
+        
+        if (task.completionDetails || (task.completionFiles && task.completionFiles.length > 0)) {
+            if (completionInfoSection) completionInfoSection.classList.remove('hidden');
+            if (modalCompletionDetails) modalCompletionDetails.textContent = task.completionDetails || 'No details provided';
+            
+            if (modalCompletionFiles) {
+                if (task.completionFiles && task.completionFiles.length > 0) {
+                    modalCompletionFiles.innerHTML = '<strong>Attached files:</strong><ul>' + 
+                        task.completionFiles.map(file => `<li>${this.escapeHtml(file.name)} (${this.formatFileSize(file.size)})</li>`).join('') + 
+                        '</ul>';
+                } else {
+                    modalCompletionFiles.innerHTML = '';
+                }
+            }
+        } else {
+            if (completionInfoSection) completionInfoSection.classList.add('hidden');
+        }
+
         // Show/hide actions based on role and task status
         const managerActions = document.getElementById('manager-actions');
         const userActions = document.getElementById('user-actions');
         const assignUserGroup = document.getElementById('assign-user-group');
         const closeTaskBtn = document.getElementById('close-task-btn');
         const approveCompletionBtn = document.getElementById('approve-completion-btn');
+        const managerEditTaskBtn = document.getElementById('manager-edit-task-btn');
+        const managerDeleteTaskBtn = document.getElementById('manager-delete-task-btn');
 
         managerActions.classList.add('hidden');
         userActions.classList.add('hidden');
         closeTaskBtn.classList.add('hidden');
         approveCompletionBtn.classList.add('hidden');
+        if (managerEditTaskBtn) managerEditTaskBtn.classList.add('hidden');
+        if (managerDeleteTaskBtn) managerDeleteTaskBtn.classList.add('hidden');
 
         if (this.currentUser.role === 'manager') {
             managerActions.classList.remove('hidden');
+            
+            if (managerEditTaskBtn) managerEditTaskBtn.classList.remove('hidden');
+            if (managerDeleteTaskBtn) managerDeleteTaskBtn.classList.remove('hidden');
             
             // Show assign option for OPEN tasks
             if (task.status === 'OPEN') {
@@ -1316,6 +1375,20 @@ class TaskFlowApp {
             }
         } else if (this.currentUser.role === 'user' && task.assigneeId === this.currentUser.id && task.status === 'PENDING') {
             userActions.classList.remove('hidden');
+            
+            // Completion form
+            const completionDetails = document.getElementById('completion-details');
+            const completionFiles = document.getElementById('completion-files');
+            const completeTaskBtn = document.getElementById('complete-task-btn');
+            const filesInfo = document.getElementById('files-info');
+            
+            if (completionDetails) completionDetails.value = '';
+            if (completionFiles) completionFiles.value = '';
+            if (filesInfo) filesInfo.textContent = '';
+            if (completeTaskBtn) completeTaskBtn.disabled = true;
+            
+            // Setup validation for completion button
+            this.setupCompletionValidation();
         }
 
         // Store current task ID for action handlers
@@ -1340,6 +1413,38 @@ class TaskFlowApp {
 
     closeTaskModal() {
         document.getElementById('task-modal').classList.add('hidden');
+    }
+
+    setupCompletionValidation() {
+        const completionDetails = document.getElementById('completion-details');
+        const completionFiles = document.getElementById('completion-files');
+        const completeTaskBtn = document.getElementById('complete-task-btn');
+        const filesInfo = document.getElementById('files-info');
+        
+        const validateCompletion = () => {
+            const hasDetails = completionDetails && completionDetails.value.trim().length > 0;
+            const hasFiles = completionFiles && completionFiles.files.length > 0;
+            
+            // Enable button only when files are uploaded
+            if (completeTaskBtn) {
+                completeTaskBtn.disabled = !hasFiles;
+            }
+            
+            // Update files info
+            if (filesInfo && completionFiles && completionFiles.files.length > 0) {
+                filesInfo.textContent = `${completionFiles.files.length} file(s) selected`;
+            } else if (filesInfo) {
+                filesInfo.textContent = '';
+            }
+        };
+        
+        if (completionDetails) {
+            completionDetails.addEventListener('input', validateCompletion);
+        }
+        
+        if (completionFiles) {
+            completionFiles.addEventListener('change', validateCompletion);
+        }
     }
 
     renderNotifications() {
@@ -1665,6 +1770,44 @@ class TaskFlowApp {
             });
         }
 
+        // Modal - Manager edit task button
+        const managerEditTaskBtn = document.getElementById('manager-edit-task-btn');
+        if (managerEditTaskBtn) {
+            managerEditTaskBtn.addEventListener('click', () => {
+                const modal = document.getElementById('task-modal');
+                const taskId = parseInt(modal.dataset.taskId);
+                const task = this.tasks.find(t => t.id === taskId);
+                
+                if (task) {
+                    this.closeTaskModal();
+                    this.editTask(task);
+                }
+            });
+        }
+
+        // Modal - Manager/Admin delete task button
+        const managerDeleteTaskBtn = document.getElementById('manager-delete-task-btn');
+        if (managerDeleteTaskBtn) {
+            managerDeleteTaskBtn.addEventListener('click', () => {
+                const modal = document.getElementById('task-modal');
+                const taskId = parseInt(modal.dataset.taskId);
+                
+                if (confirm('Are you sure you want to delete this task? This action cannot be undone.')) {
+                    this.tasks = this.tasks.filter(t => t.id !== taskId);
+                    this.saveData();
+                    this.closeTaskModal();
+                    
+                    if (this.currentUser.role === 'admin') {
+                        this.renderAdminTasks();
+                    } else if (this.currentUser.role === 'manager') {
+                        this.renderManagerTasks();
+                    }
+                    
+                    alert('Task deleted successfully.');
+                }
+            });
+        }
+
         // Modal - Complete task button
         const completeTaskBtn = document.getElementById('complete-task-btn');
         if (completeTaskBtn) {
@@ -1875,6 +2018,14 @@ class TaskFlowApp {
     truncateText(text, maxLength) {
         if (text.length <= maxLength) return text;
         return text.substring(0, maxLength) + '...';
+    }
+
+    formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
     }
 
     escapeHtml(text) {
