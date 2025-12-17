@@ -1,9 +1,11 @@
 Administrator:
 user name: Ianculescu Tudor, password: adminT
+
 Managers:
 User name: Smeu Estera-Valentina, password: managerE
 User name: Tulea Teodora-Florina, password: managerF
 User name: Vătui Ioana-Rebeca, password: managerR
+
 Users that are subordinated and have the password user123:
 Nyzamova Leyla Maksadovna
 Paş Saadet Nur
@@ -26,4 +28,4 @@ Toma Daria-Elena
 Toma Bianca-Mihaela
 Truşcă Fabian
 Tudor Daniel
-Ţurcanu G Teodor
+Ţurcanu Teodor
