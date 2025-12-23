@@ -8,7 +8,6 @@ class TaskFlowApp {
         this.currentUser = null;
         this.users = [];
         this.tasks = [];
-        this.notifications = [];
         this.messages = [];
         this.announcements = [];
         this.dataVersion = localStorage.getItem('taskflow_version');
@@ -455,64 +454,6 @@ class TaskFlowApp {
     }
 
     // ============================================
-    // Notification Management
-    // ============================================
-
-    createNotification(message, type = 'info', userId = null) {
-        const notification = {
-            id: Date.now(),
-            message: message,
-            type: type,
-            userId: userId || this.currentUser.id,
-            read: false,
-            createdAt: new Date().toISOString()
-        };
-        this.notifications.push(notification);
-        this.saveData();
-        this.updateNotificationBadge();
-    }
-
-    getNotificationsForUser(userId) {
-        return this.notifications.filter(n => n.userId === userId);
-    }
-
-    getUnreadNotificationsForUser(userId) {
-        return this.getNotificationsForUser(userId).filter(n => !n.read);
-    }
-
-    markNotificationAsRead(notificationId) {
-        const notification = this.notifications.find(n => n.id === notificationId);
-        if (notification) {
-            notification.read = true;
-            this.updateNotificationBadge();
-        }
-    }
-
-    markAllNotificationsAsRead(userId) {
-        const userNotifications = this.getNotificationsForUser(userId);
-        let hasChanges = false;
-        userNotifications.forEach(n => {
-            if (!n.read) {
-                n.read = true;
-                hasChanges = true;
-            }
-        });
-        if (hasChanges) {
-            this.saveData();
-            this.updateNotificationBadge();
-        }
-    }
-
-    updateNotificationBadge() {
-        if (!this.currentUser) return;
-        const badge = document.getElementById('notification-badge');
-        const unread = this.getUnreadNotificationsForUser(this.currentUser.id);
-        if (badge) {
-            badge.textContent = unread.length;
-            badge.classList.toggle('hidden', unread.length === 0);
-        }
-    }
-
     // ============================================
     // Task Management
     // ============================================
@@ -543,16 +484,6 @@ class TaskFlowApp {
             task.status = 'PENDING';
             task.updatedAt = new Date().toISOString();
             this.saveData();
-            
-            // Create notification for assignee
-            const assignee = this.getUserById(userId);
-            if (assignee) {
-                this.createNotification(
-                    `You have been assigned a new task: "${task.title}"`,
-                    'task_assigned',
-                    assignee.id
-                );
-            }
             
             return true;
         }
@@ -591,16 +522,6 @@ class TaskFlowApp {
             task.updatedAt = new Date().toISOString();
             this.saveData();
             
-            // Create notification for manager
-            const manager = this.getUserById(task.creatorId);
-            if (manager) {
-                this.createNotification(
-                    `${this.currentUser.fullName} requested completion for task "${task.title}"`,
-                    'completion_request',
-                    manager.id
-                );
-            }
-            
             return true;
         }
         
@@ -614,16 +535,6 @@ class TaskFlowApp {
             task.status = 'COMPLETED';
             task.updatedAt = new Date().toISOString();
             this.saveData();
-            
-            // Create notification for assignee
-            const assignee = this.getUserById(task.assigneeId);
-            if (assignee) {
-                this.createNotification(
-                    `Your completion request for "${task.title}" was approved`,
-                    'completion_approved',
-                    assignee.id
-                );
-            }
             
             return true;
         }
@@ -858,9 +769,6 @@ class TaskFlowApp {
         // Update header
         document.getElementById('current-user-name').textContent = `Welcome back ${this.currentUser.fullName}!`;
         document.getElementById('current-user-role').textContent = this.currentUser.role.toUpperCase();
-
-        // Update notification badge
-        this.updateNotificationBadge();
 
         // Show appropriate view based on role
         if (this.currentUser.role === 'admin') {
@@ -1447,39 +1355,6 @@ class TaskFlowApp {
         }
     }
 
-    renderNotifications() {
-        const container = document.getElementById('notifications-dropdown');
-        const notifications = this.getNotificationsForUser(this.currentUser.id);
-        
-        if (notifications.length === 0) {
-            container.innerHTML = '<div class="notification-empty">No notifications</div>';
-            return;
-        }
-
-        container.innerHTML = '';
-        
-        // Show most recent first
-        notifications.reverse().forEach(notification => {
-            const item = document.createElement('div');
-            item.className = `notification-item ${notification.read ? 'read' : 'unread'}`;
-            item.innerHTML = `
-                <div class="notification-content">
-                    <p class="notification-message">${this.escapeHtml(notification.message)}</p>
-                    <span class="notification-time">${this.formatDate(notification.createdAt)}</span>
-                </div>
-                <button class="notification-close" data-id="${notification.id}">×</button>
-            `;
-            
-            item.querySelector('.notification-close').addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.markNotificationAsRead(notification.id);
-                this.renderNotifications();
-            });
-            
-            container.appendChild(item);
-        });
-    }
-
     renderUserChat() {
         const container = document.getElementById('user-chat-messages');
         const messages = this.getUserManagerMessages();
@@ -1682,27 +1557,6 @@ class TaskFlowApp {
         if (teamMemberSelect) {
             teamMemberSelect.addEventListener('change', (e) => {
                 this.renderTeamMemberHistory(e.target.value);
-            });
-        }
-
-        // Notification dropdown toggle
-        const notificationBtn = document.getElementById('notification-btn');
-        const notificationsDropdown = document.getElementById('notifications-dropdown');
-        
-        if (notificationBtn && notificationsDropdown) {
-            notificationBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                notificationsDropdown.classList.toggle('hidden');
-                this.renderNotifications();
-                this.markAllNotificationsAsRead(this.currentUser.id);
-                this.updateNotificationBadge();
-            });
-
-            // Close dropdown when clicking outside
-            document.addEventListener('click', (e) => {
-                if (!e.target.closest('.notification-container')) {
-                    notificationsDropdown.classList.add('hidden');
-                }
             });
         }
 
